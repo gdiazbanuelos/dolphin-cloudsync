@@ -1,6 +1,58 @@
-# Dolphin - A GameCube and Wii Emulator
+# Dolphin CloudSync - A GameCube and Wii Emulator with Dropbox Cloud Saves
 
-[Homepage](https://dolphin-emu.org/) | [Project Site](https://github.com/dolphin-emu/dolphin) | [Buildbot](https://dolphin.ci/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/) | [GitHub Wiki](https://github.com/dolphin-emu/dolphin/wiki) | [Issue Tracker](https://bugs.dolphin-emu.org/projects/emulator/issues) | [Coding Style](https://github.com/dolphin-emu/dolphin/blob/master/Contributing.md) | [Transifex Page](https://app.transifex.com/dolphinemu/dolphin-emu/dashboard/) | [Analytics](https://mon.dolphin-emu.org/)
+This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolphin) that adds automatic cloud save syncing via [rclone](https://rclone.org/) and Dropbox. Saves are automatically pushed to Dropbox after each in-game save and pulled down before each game launch — similar to how Steam Cloud works.
+
+**Upstream project:** [Project Site](https://github.com/dolphin-emu/dolphin) | [Homepage](https://dolphin-emu.org/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/)
+
+## Cloud Save Feature
+
+### How it works
+
+- **On game launch** — Dolphin checks Dropbox for any save newer than your local copy and downloads it before the game loads
+- **On in-game save** — Dolphin silently pushes the updated save file to Dropbox in the background
+- Saves are organized as: `Dropbox/Dolphin Cloud Saves/{Game Title} ({Game ID})/`
+- Works across Windows and Linux (including Steam Deck)
+- If rclone is not installed or Dropbox is unreachable, Dolphin runs normally without syncing
+
+### Setup
+
+**1. Install rclone**
+
+- Windows: download from https://rclone.org/downloads/
+- Linux/Steam Deck:
+  ```sh
+  mkdir -p ~/bin
+  curl https://downloads.rclone.org/rclone-current-linux-amd64.zip -o /tmp/rclone.zip
+  unzip /tmp/rclone.zip -d /tmp/rclone-tmp
+  cp /tmp/rclone-tmp/rclone-*/rclone ~/bin/rclone
+  chmod +x ~/bin/rclone
+  ```
+
+**2. Configure Dropbox**
+```sh
+rclone config
+```
+Follow the prompts: choose `n` for new remote, name it `Dropbox`, select `dropbox` as the type, and authorize via browser.
+
+**3. Enable GCI Folder mode in Dolphin**
+
+Config → GameCube → Memory Card → set to **GCI Folder**
+
+That's it — saves will sync automatically from that point on.
+
+### Supported rclone locations (Linux)
+
+The following paths are checked in order:
+- `/usr/bin/rclone`
+- `/usr/local/bin/rclone`
+- `/home/deck/bin/rclone`
+- `$HOME/bin/rclone`
+
+### Downloads
+
+Pre-built binaries are available on the [Releases](https://github.com/gdiazbanuelos/dolphin-cloudsync/releases) page.
+
+---
 
 Dolphin is an emulator for running GameCube and Wii games on Windows,
 Linux, macOS, and recent Android devices. It's licensed under the terms

@@ -3,6 +3,10 @@ name: Build Linux AppImage
 on:
   push:
     branches: [ master ]
+    paths:
+      - 'Source/**'
+      - 'CMakeLists.txt'
+      - 'Data/**'
   workflow_dispatch:
 
 permissions:

@@ -850,7 +850,8 @@ void GCMemcardDirectory::FlushToFile()
               const std::string remote_dir = BuildRcloneRemoteDir(m_game_id);
               const std::string gci_path = save.m_filename;
               std::thread([remote_dir, gci_path] {
-                RunRcloneSync({"copy", gci_path, remote_dir, "--no-traverse"});
+                if (RunRcloneSync({"copy", gci_path, remote_dir, "--no-traverse"}))
+                  Core::DisplayMessage("Wrote save to Dropbox", 4000);
               }).detach();
             }
           }

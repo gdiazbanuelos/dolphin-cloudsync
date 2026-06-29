@@ -1,0 +1,48 @@
+name: Build Windows
+
+on:
+  push:
+    branches: [ master ]
+    paths:
+      - 'Source/**'
+      - 'Data/**'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Build
+        run: |
+          msbuild Source/dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /m
+
+      - name: Get version
+        id: version
+        shell: bash
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Zip release folder
+        shell: pwsh
+        run: |
+          Compress-Archive -Path Binary\x64\* -DestinationPath Dolphin-CloudSync-Windows.zip
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: cloudsync-${{ steps.version.outputs.sha }}
+          name: Dolphin CloudSync ${{ steps.version.outputs.sha }}
+          body: |
+            Automated build of Dolphin with rclone Dropbox cloud save sync.
+            Commit: ${{ github.sha }}
+          files: Dolphin-CloudSync-Windows.zip
+          prerelease: false

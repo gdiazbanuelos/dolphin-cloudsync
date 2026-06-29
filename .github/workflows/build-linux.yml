@@ -5,6 +5,9 @@ on:
     branches: [ master ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -48,8 +51,17 @@ jobs:
             --plugin qt \
             --output appimage
 
-      - name: Upload AppImage
-        uses: actions/upload-artifact@v4
+      - name: Get version
+        id: version
+        run: echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: Dolphin-CloudSync-Linux
-          path: Dolphin-CloudSync-x86_64.AppImage
+          tag_name: cloudsync-${{ steps.version.outputs.sha }}
+          name: Dolphin CloudSync ${{ steps.version.outputs.sha }}
+          body: |
+            Automated build of Dolphin with rclone Dropbox cloud save sync.
+            Commit: ${{ github.sha }}
+          files: Dolphin-CloudSync-x86_64.AppImage
+          prerelease: false

@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
 
       - name: Configure git
@@ -41,4 +41,4 @@ jobs:
 
       - name: Push merged changes
         if: steps.merge.outcome == 'success'
-        run: git push origin master
+        run: git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/gdiazbanuelos/dolphin-cloudsync.git master

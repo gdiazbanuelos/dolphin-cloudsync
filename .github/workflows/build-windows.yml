@@ -31,7 +31,7 @@ jobs:
         shell: bash
         run: |
           echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "ts=$(date -u +'%Y%m%d-%H%M%S')" >> $GITHUB_OUTPUT
+          echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
 
       - name: Zip release folder
         shell: pwsh
@@ -41,8 +41,8 @@ jobs:
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: cloudsync-${{ steps.version.outputs.ts }}-${{ steps.version.outputs.sha }}
-          name: Dolphin CloudSync ${{ steps.version.outputs.ts }}
+          tag_name: ${{ steps.version.outputs.version }}
+          name: Dolphin CloudSync ${{ steps.version.outputs.version }}
           body: |
             Automated build of Dolphin with rclone Dropbox cloud save sync.
             Commit: ${{ github.sha }}

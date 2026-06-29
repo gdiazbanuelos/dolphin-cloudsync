@@ -5,7 +5,10 @@
 
 #include <algorithm>
 #include <chrono>
+#include <ctime>
 #include <cstring>
+#include <sstream>
+#include <thread>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -26,6 +29,15 @@
 #include "Common/MsgHandler.h"
 #include "Common/StringUtil.h"
 #include "Common/Thread.h"
+
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <spawn.h>
+#include <sys/wait.h>
+#include <unistd.h>
+extern char** environ;
+#endif
 
 #include "Core/Config/MainSettings.h"
 #include "Core/Config/SessionSettings.h"
@@ -177,12 +189,178 @@ std::vector<std::string> GCMemcardDirectory::GetFileNamesForGameID(const std::st
   return filenames;
 }
 
+#ifndef _WIN32
+static std::string FindRclonePath()
+{
+  std::vector<std::string> candidates = {
+      "/usr/bin/rclone",
+      "/usr/local/bin/rclone",
+      "/home/deck/bin/rclone",
+  };
+  if (const char* home = getenv("HOME"))
+    candidates.push_back(std::string(home) + "/bin/rclone");
+
+  // When running inside an AppImage the filesystem is a mounted squashfs.
+  // Prefix paths with /proc/1/root to access the host filesystem instead.
+  const std::vector<std::string> base_candidates = candidates;
+  for (const std::string& path : base_candidates)
+    candidates.push_back("/proc/1/root" + path);
+
+  for (const std::string& path : candidates)
+  {
+    if (access(path.c_str(), X_OK) == 0)
+      return path;
+  }
+  return {};
+}
+#endif
+
+static bool RunRcloneSync(const std::vector<std::string>& args)
+{
+#ifdef _WIN32
+  std::string cmdline = "rclone";
+  for (const std::string& arg : args)
+    cmdline += fmt::format(" \"{}\"", arg);
+
+  const std::wstring wcmd = UTF8ToWString(cmdline);
+  STARTUPINFOW si{};
+  si.cb = sizeof(si);
+  si.dwFlags = STARTF_USESHOWWINDOW;
+  si.wShowWindow = SW_HIDE;
+  PROCESS_INFORMATION pi{};
+  if (!CreateProcessW(nullptr, const_cast<wchar_t*>(wcmd.c_str()), nullptr, nullptr, FALSE,
+                      CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
+  {
+    return false;
+  }
+  WaitForSingleObject(pi.hProcess, INFINITE);
+  CloseHandle(pi.hProcess);
+  CloseHandle(pi.hThread);
+  return true;
+#else
+  const std::string rclone_path = FindRclonePath();
+  if (rclone_path.empty())
+    return false;
+
+  std::vector<char*> argv;
+  argv.push_back(const_cast<char*>(rclone_path.c_str()));
+  for (const std::string& arg : args)
+    argv.push_back(const_cast<char*>(arg.c_str()));
+  argv.push_back(nullptr);
+
+  pid_t pid;
+  if (posix_spawnp(&pid, rclone_path.c_str(), nullptr, nullptr, argv.data(), environ) != 0)
+    return false;
+
+  int status;
+  waitpid(pid, &status, 0);
+  return true;
+#endif
+}
+
+static std::string BuildRcloneRemoteDir(u32 game_id)
+{
+  const u32 swapped = Common::swap32(game_id);
+  const std::string game_id_str(reinterpret_cast<const char*>(&swapped), 4);
+  const std::string suffix = fmt::format("({})", game_id_str);
+  const std::string cloud_root = "Dropbox:Dolphin Cloud Saves";
+
+  // Scan the cloud root for any existing folder ending in (game_id).
+  // This ensures saves are found regardless of title name or platform differences.
+  std::string listing;
+#ifdef _WIN32
+  {
+    const std::wstring wcmd =
+        UTF8ToWString(fmt::format("rclone lsf \"{}\" --dirs-only", cloud_root));
+    HANDLE read_pipe, write_pipe;
+    SECURITY_ATTRIBUTES sa{sizeof(sa), nullptr, TRUE};
+    if (CreatePipe(&read_pipe, &write_pipe, &sa, 0))
+    {
+      STARTUPINFOW si{};
+      si.cb = sizeof(si);
+      si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+      si.hStdOutput = write_pipe;
+      si.hStdError = write_pipe;
+      si.wShowWindow = SW_HIDE;
+      PROCESS_INFORMATION pi{};
+      if (CreateProcessW(nullptr, const_cast<wchar_t*>(wcmd.c_str()), nullptr, nullptr, TRUE,
+                         CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
+      {
+        CloseHandle(write_pipe);
+        char buf[512];
+        DWORD bytes_read;
+        while (ReadFile(read_pipe, buf, sizeof(buf) - 1, &bytes_read, nullptr) && bytes_read > 0)
+        {
+          buf[bytes_read] = '\0';
+          listing += buf;
+        }
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+      }
+      else
+      {
+        CloseHandle(write_pipe);
+      }
+      CloseHandle(read_pipe);
+    }
+  }
+#else
+  {
+    const std::string rclone_path = FindRclonePath();
+    if (rclone_path.empty())
+      return fmt::format("{}/{} {}", cloud_root, game_id_str, suffix);
+
+    const std::string list_cmd =
+        fmt::format("\"{}\" lsf \"{}\" --dirs-only 2>/dev/null", rclone_path, cloud_root);
+    FILE* pipe = popen(list_cmd.c_str(), "r");
+    if (pipe)
+    {
+      char buf[512];
+      while (fgets(buf, sizeof(buf), pipe))
+        listing += buf;
+      pclose(pipe);
+    }
+  }
+#endif
+
+  std::istringstream stream(listing);
+  std::string entry;
+  while (std::getline(stream, entry))
+  {
+    while (!entry.empty() && (entry.back() == '\n' || entry.back() == '\r' || entry.back() == '/'))
+      entry.pop_back();
+    if (entry.size() >= suffix.size() &&
+        entry.substr(entry.size() - suffix.size()) == suffix)
+    {
+      return fmt::format("{}/{}", cloud_root, entry);
+    }
+  }
+
+  // Nothing found — build a name from title or game ID for first upload.
+  const std::string title = SConfig::GetInstance().GetTitleName();
+  if (!title.empty())
+    return fmt::format("{}/{}", cloud_root,
+                       Common::EscapeFileName(fmt::format("{} {}", title, suffix)));
+
+  return fmt::format("{}/{} {}", cloud_root, game_id_str, suffix);
+}
+
+static void PullSavesFromCloud(u32 game_id, const std::string& local_dir)
+{
+  const std::string remote_dir = BuildRcloneRemoteDir(game_id);
+  RunRcloneSync({"copy", remote_dir, local_dir, "--update", "--no-traverse"});
+}
+
 GCMemcardDirectory::GCMemcardDirectory(std::string directory, ExpansionInterface::Slot slot,
                                        const Memcard::HeaderData& header_data, u32 game_id)
     : MemoryCardBase(slot, header_data.m_size_mb), m_game_id(game_id), m_last_block(-1),
       m_hdr(header_data), m_bat1(header_data.m_size_mb), m_saves(0),
       m_save_directory(std::move(directory)), m_exiting(false)
 {
+  // Pull any newer saves from cloud before loading files from disk.
+  PullSavesFromCloud(m_game_id, m_save_directory);
+
   // Use existing header data if available
   {
     File::IOFile((m_save_directory + MC_HDR), "rb").ReadBytes(&m_hdr, Memcard::BLOCK_SIZE);
@@ -666,6 +844,15 @@ void GCMemcardDirectory::FlushToFile()
           if (gci.IsGood())
           {
             Core::DisplayMessage("Wrote save contents to GCI Folder", 4000);
+
+            // Push updated .gci to cloud in the background.
+            {
+              const std::string remote_dir = BuildRcloneRemoteDir(m_game_id);
+              const std::string gci_path = save.m_filename;
+              std::thread([remote_dir, gci_path] {
+                RunRcloneSync({"copy", gci_path, remote_dir, "--no-traverse"});
+              }).detach();
+            }
           }
           else
           {

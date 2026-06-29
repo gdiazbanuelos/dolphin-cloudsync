@@ -1,0 +1,55 @@
+name: Build Linux AppImage
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake build-essential pkg-config libgl1-mesa-dev \
+            libevdev-dev libusb-1.0-0-dev libudev-dev libpulse-dev libasound2-dev \
+            libxi-dev libxrandr-dev libssl-dev qt6-base-dev qt6-base-private-dev \
+            libqt6svg6-dev libxkbcommon-dev libvulkan-dev libminiupnpc-dev \
+            libbluetooth-dev libcurl4-openssl-dev libsfml-dev
+
+      - name: Build
+        run: |
+          mkdir build && cd build
+          cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/install
+          make -j$(nproc)
+          make install
+
+      - name: Download linuxdeploy
+        run: |
+          wget https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          wget https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy-x86_64.AppImage linuxdeploy-plugin-qt-x86_64.AppImage
+
+      - name: Package AppImage
+        env:
+          QMAKE: /usr/bin/qmake6
+          OUTPUT: Dolphin-CloudSync-x86_64.AppImage
+        run: |
+          ./linuxdeploy-x86_64.AppImage \
+            --appdir appdir \
+            --executable ${{ github.workspace }}/install/bin/dolphin-emu \
+            --desktop-file Data/dolphin-emu.desktop \
+            --icon-file Data/dolphin-emu.png \
+            --plugin qt \
+            --output appimage
+
+      - name: Upload AppImage
+        uses: actions/upload-artifact@v4
+        with:
+          name: Dolphin-CloudSync-Linux
+          path: Dolphin-CloudSync-x86_64.AppImage

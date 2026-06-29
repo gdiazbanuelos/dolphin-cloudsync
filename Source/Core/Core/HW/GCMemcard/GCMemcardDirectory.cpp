@@ -349,7 +349,8 @@ static std::string BuildRcloneRemoteDir(u32 game_id)
 static void PullSavesFromCloud(u32 game_id, const std::string& local_dir)
 {
   const std::string remote_dir = BuildRcloneRemoteDir(game_id);
-  RunRcloneSync({"copy", remote_dir, local_dir, "--update", "--no-traverse"});
+  if (RunRcloneSync({"copy", remote_dir, local_dir, "--update", "--no-traverse"}))
+    Core::DisplayMessage("Pulled latest save from Dropbox", 4000);
 }
 
 GCMemcardDirectory::GCMemcardDirectory(std::string directory, ExpansionInterface::Slot slot,

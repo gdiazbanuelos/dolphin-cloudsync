@@ -48,10 +48,16 @@ jobs:
           OUTPUT: Dolphin-CloudSync-x86_64.AppImage
           UPDATE_INFORMATION: gh-releases-zsync|gdiazbanuelos|dolphin-cloudsync|latest|Dolphin-CloudSync-x86_64.AppImage.zsync
         run: |
+          VERSION=$(date -u +'%Y.%m.%d')
+          DATE=$(date -u +'%Y-%m-%d')
+          sed -i "s/^Version=.*/Version=$VERSION/" Data/dolphin-emu.desktop
+          sed -i "s/version=\"PLACEHOLDER\"/version=\"$VERSION\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
+          sed -i "s/date=\"PLACEHOLDER\"/date=\"$DATE\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
           ./linuxdeploy-x86_64.AppImage \
             --appdir appdir \
             --executable ${{ github.workspace }}/install/bin/dolphin-emu \
             --desktop-file Data/dolphin-emu.desktop \
+            --appstream-file Data/org.DolphinEmu.dolphin-emu.appdata.xml \
             --icon-file Data/dolphin-emu.png \
             --plugin qt \
             --output appimage

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.DolphinEmu.dolphin-emu</id>
+  <name>Dolphin Emulator</name>
+  <summary>A Wii/GameCube Emulator with Dropbox cloud save sync</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-2.0-or-later</project_license>
+  <description>
+    <p>Dolphin is a GameCube and Wii emulator with Dropbox cloud save synchronization.</p>
+  </description>
+  <releases>
+    <release version="PLACEHOLDER" date="PLACEHOLDER"/>
+  </releases>
+  <url type="homepage">https://github.com/gdiazbanuelos/dolphin-cloudsync</url>
+</component>

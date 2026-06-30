@@ -687,12 +687,13 @@ void MenuBar::AddHelpMenu()
         QUrl(QStringLiteral("https://bugs.dolphin-emu.org/projects/emulator")));
   });
 
-  if (AutoUpdateChecker::SystemSupportsAutoUpdates())
-  {
-    help_menu->addSeparator();
+  help_menu->addSeparator();
 
-    help_menu->addAction(tr("&Check for Updates..."), this, &MenuBar::InstallUpdateManually);
-  }
+  QAction* releases = help_menu->addAction(tr("&Check for Updates..."));
+  connect(releases, &QAction::triggered, this, [] {
+    QDesktopServices::openUrl(
+        QUrl(QStringLiteral("https://github.com/gdiazbanuelos/dolphin-cloudsync/releases")));
+  });
 
 #ifndef __APPLE__
   help_menu->addSeparator();

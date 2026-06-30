@@ -1,5 +1,9 @@
 # Dolphin CloudSync - A GameCube and Wii Emulator with Dropbox Cloud Saves
 
+![Build Windows](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-windows.yml/badge.svg)
+![Build Linux](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-linux.yml/badge.svg)
+![Sync Upstream](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/sync-upstream.yml/badge.svg)
+
 This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolphin) that adds automatic cloud save syncing via [rclone](https://rclone.org/) and Dropbox. Saves are automatically pushed to Dropbox after each in-game save and pulled down before each game launch — similar to how Steam Cloud works.
 
 **Upstream project:** [Project Site](https://github.com/dolphin-emu/dolphin) | [Homepage](https://dolphin-emu.org/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/)

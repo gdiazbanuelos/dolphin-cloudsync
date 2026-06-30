@@ -50,7 +50,6 @@ jobs:
         run: |
           VERSION=$(date -u +'%Y.%m.%d')
           DATE=$(date -u +'%Y-%m-%d')
-          sed -i "s/^Version=.*/Version=$VERSION/" Data/dolphin-emu.desktop
           sed -i "s/version=\"PLACEHOLDER\"/version=\"$VERSION\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
           sed -i "s/date=\"PLACEHOLDER\"/date=\"$DATE\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
           mkdir -p appdir/usr/share/metainfo

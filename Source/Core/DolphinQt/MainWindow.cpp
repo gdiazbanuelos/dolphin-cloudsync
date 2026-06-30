@@ -697,6 +697,7 @@ void MainWindow::ConnectToolBar()
   connect(m_tool_bar, &ToolBar::SettingsPressed, this, &MainWindow::ShowSettingsWindow);
   connect(m_tool_bar, &ToolBar::ControllersPressed, this, &MainWindow::ShowControllersWindow);
   connect(m_tool_bar, &ToolBar::GraphicsPressed, this, &MainWindow::ShowGraphicsWindow);
+  connect(m_tool_bar, &ToolBar::CloudSavesPressed, this, &MainWindow::ShowCloudSavesWindow);
 
   connect(m_tool_bar, &ToolBar::StepPressed, m_code_widget, &CodeWidget::Step);
   connect(m_tool_bar, &ToolBar::StepOverPressed, m_code_widget, &CodeWidget::StepOver);
@@ -1337,6 +1338,12 @@ void MainWindow::ShowControllersWindow()
 {
   ShowSettingsWindow();
   m_settings_window->SelectPane(SettingsWindowPaneIndex::Controllers);
+}
+
+void MainWindow::ShowCloudSavesWindow()
+{
+  ShowSettingsWindow();
+  m_settings_window->SelectPane(SettingsWindowPaneIndex::CloudSaves);
 }
 
 void MainWindow::ShowTriforceWindow()

@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find / -iname \"classic.png\" 2>/dev/null | head; find / -path \"*Theme*\" -iname \"config*\" 2>/dev/null | head -20)",
+      "mcp__visualize__read_me",
+      "mcp__visualize__show_widget",
+      "Bash(python3 -c ' *)"
+    ]
+  }
+}

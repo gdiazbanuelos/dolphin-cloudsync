@@ -24,6 +24,7 @@
 #include "DolphinQt/Settings.h"
 #include "DolphinQt/Settings/AdvancedPane.h"
 #include "DolphinQt/Settings/AudioPane.h"
+#include "DolphinQt/Settings/CloudSavesPane.h"
 #include "DolphinQt/Settings/GameCubePane.h"
 #include "DolphinQt/Settings/GeneralPane.h"
 #include "DolphinQt/Settings/InterfacePane.h"
@@ -194,6 +195,7 @@ SettingsWindow::SettingsWindow(MainWindow* parent) : StackedSettingsWindow{paren
   AddWrappedPane(new GeneralPane, tr("General"));
   AddPane(new GraphicsPane{parent, nullptr}, tr("Graphics"));
   AddWrappedPane(new ControllersPane, tr("Controllers"));
+  AddWrappedPane(new CloudSavesPane, tr("Cloud Saves"));
   AddWrappedPane(new InterfacePane, tr("Interface"));
   AddWrappedPane(new OnScreenDisplayPane, tr("On-Screen Display"));
   AddWrappedPane(new AudioPane, tr("Audio"));

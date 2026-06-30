@@ -53,11 +53,12 @@ jobs:
           sed -i "s/^Version=.*/Version=$VERSION/" Data/dolphin-emu.desktop
           sed -i "s/version=\"PLACEHOLDER\"/version=\"$VERSION\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
           sed -i "s/date=\"PLACEHOLDER\"/date=\"$DATE\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
+          mkdir -p appdir/usr/share/metainfo
+          cp Data/org.DolphinEmu.dolphin-emu.appdata.xml appdir/usr/share/metainfo/
           ./linuxdeploy-x86_64.AppImage \
             --appdir appdir \
             --executable ${{ github.workspace }}/install/bin/dolphin-emu \
             --desktop-file Data/dolphin-emu.desktop \
-            --appstream-file Data/org.DolphinEmu.dolphin-emu.appdata.xml \
             --icon-file Data/dolphin-emu.png \
             --plugin qt \
             --output appimage

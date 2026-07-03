@@ -238,7 +238,8 @@ static std::string BuildRcloneRemoteDir(u32 game_id)
   const u32 swapped = Common::swap32(game_id);
   const std::string game_id_str(reinterpret_cast<const char*>(&swapped), 4);
   const std::string suffix = fmt::format("({})", game_id_str);
-  const std::string cloud_root = "Dropbox:Dolphin Cloud Saves";
+  const std::string cloud_root =
+      Config::Get(Config::MAIN_CLOUDSYNC_REMOTE) + ":Dolphin Cloud Saves";
 
   // Scan the cloud root for any existing folder ending in (game_id).
   // This ensures saves are found regardless of title name or platform differences.
@@ -325,7 +326,9 @@ static void PullSavesFromCloud(u32 game_id, const std::string& local_dir)
 {
   const std::string remote_dir = BuildRcloneRemoteDir(game_id);
   if (RunRcloneSync({"copy", remote_dir, local_dir, "--update", "--no-traverse"}))
-    Core::DisplayMessage("Pulled latest save from Dropbox", 4000);
+    Core::DisplayMessage(
+        fmt::format("Pulled latest save from {}", Config::Get(Config::MAIN_CLOUDSYNC_REMOTE)),
+        4000);
 }
 
 GCMemcardDirectory::GCMemcardDirectory(std::string directory, ExpansionInterface::Slot slot,
@@ -827,7 +830,9 @@ void GCMemcardDirectory::FlushToFile()
               const std::string gci_path = save.m_filename;
               std::thread([remote_dir, gci_path] {
                 if (RunRcloneSync({"copy", gci_path, remote_dir, "--no-traverse"}))
-                  Core::DisplayMessage("Wrote save to Dropbox", 4000);
+                  Core::DisplayMessage(
+                      fmt::format("Wrote save to {}", Config::Get(Config::MAIN_CLOUDSYNC_REMOTE)),
+                      4000);
               }).detach();
             }
           }

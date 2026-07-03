@@ -4,7 +4,9 @@
 ![Build Linux](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-linux.yml/badge.svg)
 ![Sync Upstream](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/sync-upstream.yml/badge.svg)
 
-This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolphin) that adds automatic cloud save syncing via [rclone](https://rclone.org/) and Dropbox. Saves are automatically pushed to Dropbox after each in-game save and pulled down before each game launch — similar to how Steam Cloud works.
+This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolphin) that adds automatic cloud save syncing via [rclone](https://rclone.org/). Saves are automatically pushed to the cloud after each in-game save and pulled down before each game launch — similar to how Steam Cloud works.
+
+rclone supports over 70 storage providers including Dropbox, Google Drive, OneDrive, and more. The default remote is Dropbox, but any rclone-compatible provider can be used.
 
 **Upstream project:** [Project Site](https://github.com/dolphin-emu/dolphin) | [Homepage](https://dolphin-emu.org/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/)
 
@@ -12,17 +14,27 @@ This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolph
 
 ### How it works
 
-- **On game launch** — Dolphin checks Dropbox for any save newer than your local copy and downloads it before the game loads
-- **On in-game save** — Dolphin silently pushes the updated save file to Dropbox in the background
-- Saves are organized as: `Dropbox/Dolphin Cloud Saves/{Game Title} ({Game ID})/`
+- **On game launch** — Dolphin checks your configured cloud remote for any save newer than your local copy and downloads it before the game loads
+- **On in-game save** — Dolphin silently pushes the updated save file to the cloud in the background
+- Saves are organized as: `{Remote}/Dolphin Cloud Saves/{Game Title} ({Game ID})/`
 - Works across Windows and Linux (including Steam Deck)
-- If rclone is not installed or Dropbox is unreachable, Dolphin runs normally without syncing
+- If rclone is not installed or the remote is unreachable, Dolphin runs normally without syncing
 
 ### Setup
 
 **1. Install rclone**
 
-- Windows: download from https://rclone.org/downloads/
+- Windows:
+  1. Download the zip from https://rclone.org/downloads/ and extract it to a folder (e.g. `C:\rclone`)
+  2. Add rclone to your PATH so Dolphin can find it:
+     - Open **Start** → search for **"Environment Variables"** → click **"Edit the system environment variables"**
+     - Click **Environment Variables** → under **System variables**, select **Path** → click **Edit**
+     - Click **New** and add the folder path where you extracted rclone (e.g. `C:\rclone`)
+     - Click **OK** on all dialogs
+  3. Open a new terminal and verify with:
+     ```sh
+     rclone version
+     ```
 - Linux/Steam Deck:
   ```sh
   mkdir -p ~/bin
@@ -32,15 +44,29 @@ This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolph
   chmod +x ~/bin/rclone
   ```
 
-**2. Configure Dropbox**
+**2. Configure your cloud remote**
 ```sh
 rclone config
 ```
-Follow the prompts: choose `n` for new remote, name it `Dropbox`, select `dropbox` as the type, and authorize via browser.
+Follow the prompts: choose `n` for new remote, give it a name, select your storage provider type, and authorize via browser.
+
+The default remote name Dolphin looks for is `Dropbox`, but you can name it anything and use any supported provider (Google Drive, OneDrive, S3, etc.). Just make sure the name you enter in Dolphin's Cloud Saves settings matches what you set here.
 
 **3. Enable GCI Folder mode in Dolphin**
 
 Config → GameCube → Memory Card → set to **GCI Folder**
+
+**4. Set your rclone remote name (optional)**
+
+By default, Dolphin will sync to a remote named `Dropbox`. If you named your remote something different (e.g. `GoogleDrive`, `MyNAS`), you can change it in Dolphin:
+
+Cloud Saves → rclone Remote → enter the name to match your remote
+
+To see all your configured remote names, run:
+```sh
+rclone listremotes
+```
+Enter the name without the colon. For example if `rclone listremotes` shows `GoogleDrive:`, enter `GoogleDrive`.
 
 That's it — saves will sync automatically from that point on.
 

@@ -325,6 +325,10 @@ extern const Info<bool> MAIN_FIFOPLAYER_EARLY_MEMORY_UPDATES;
 extern const Info<std::string> MAIN_AUTOUPDATE_UPDATE_TRACK;
 extern const Info<std::string> MAIN_AUTOUPDATE_HASH_OVERRIDE;
 
+// Main.CloudSync
+
+extern const Info<std::string> MAIN_CLOUDSYNC_REMOTE;
+
 // Main.Movie
 
 extern const Info<bool> MAIN_MOVIE_PAUSE_MOVIE;

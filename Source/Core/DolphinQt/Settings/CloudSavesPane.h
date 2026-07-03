@@ -6,6 +6,7 @@
 #include <QWidget>
 
 class QLabel;
+class QLineEdit;
 
 class CloudSavesPane final : public QWidget
 {
@@ -18,4 +19,5 @@ private:
   void RunCheck();
 
   QLabel* m_status_label;
+  QLineEdit* m_remote_edit;
 };

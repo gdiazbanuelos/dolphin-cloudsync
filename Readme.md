@@ -12,6 +12,10 @@ rclone supports over 70 storage providers including Dropbox, Google Drive, OneDr
 
 ## Cloud Save Feature
 
+| Cloud Saves Menu Icon | Cloud Saves settings pane |
+|:---:|:---:|
+| ![](docs/cloudsaves.png) | ![](docs/cloudsavessettings.png) |
+
 ### How it works
 
 - **On game launch** — Dolphin checks your configured cloud remote for any save newer than your local copy and downloads it before the game loads

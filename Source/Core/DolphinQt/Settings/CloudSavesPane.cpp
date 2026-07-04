@@ -26,9 +26,15 @@ CloudSavesPane::CloudSavesPane()
   m_enable_checkbox->setChecked(Config::Get(Config::MAIN_CLOUDSYNC_ENABLED));
   main_layout->addWidget(m_enable_checkbox);
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
+  connect(m_enable_checkbox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
+    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
+  });
+#else
   connect(m_enable_checkbox, &QCheckBox::stateChanged, this, [this](int state) {
     Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
   });
+#endif
 
   // Remote config group
   auto* const remote_group = new QGroupBox{tr("rclone Remote")};

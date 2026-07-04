@@ -26,7 +26,7 @@ CloudSavesPane::CloudSavesPane()
   m_enable_checkbox->setChecked(Config::Get(Config::MAIN_CLOUDSYNC_ENABLED));
   main_layout->addWidget(m_enable_checkbox);
 
-  connect(m_enable_checkbox, &QCheckBox::checkStateChanged, this, [this](int state) {
+  connect(m_enable_checkbox, &QCheckBox::stateChanged, this, [this](int state) {
     Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
   });
 

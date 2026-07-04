@@ -3,6 +3,7 @@
 
 #include "DolphinQt/Settings/CloudSavesPane.h"
 
+#include <QCheckBox>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
@@ -19,6 +20,15 @@
 CloudSavesPane::CloudSavesPane()
 {
   auto* const main_layout = new QVBoxLayout{this};
+
+  // Enable/disable toggle
+  m_enable_checkbox = new QCheckBox{tr("Enable cloud save sync")};
+  m_enable_checkbox->setChecked(Config::Get(Config::MAIN_CLOUDSYNC_ENABLED));
+  main_layout->addWidget(m_enable_checkbox);
+
+  connect(m_enable_checkbox, &QCheckBox::checkStateChanged, this, [this](int state) {
+    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
+  });
 
   // Remote config group
   auto* const remote_group = new QGroupBox{tr("rclone Remote")};

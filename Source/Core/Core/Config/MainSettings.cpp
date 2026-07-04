@@ -518,6 +518,7 @@ const Info<std::string> MAIN_AUTOUPDATE_HASH_OVERRIDE{{System::Main, "AutoUpdate
 
 // Main.CloudSync
 
+const Info<bool> MAIN_CLOUDSYNC_ENABLED{{System::Main, "CloudSync", "Enabled"}, true};
 const Info<std::string> MAIN_CLOUDSYNC_REMOTE{{System::Main, "CloudSync", "Remote"}, "Dropbox"};
 
 // Main.Movie

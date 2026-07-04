@@ -338,7 +338,8 @@ GCMemcardDirectory::GCMemcardDirectory(std::string directory, ExpansionInterface
       m_save_directory(std::move(directory)), m_exiting(false)
 {
   // Pull any newer saves from cloud before loading files from disk.
-  PullSavesFromCloud(m_game_id, m_save_directory);
+  if (Config::Get(Config::MAIN_CLOUDSYNC_ENABLED))
+    PullSavesFromCloud(m_game_id, m_save_directory);
 
   // Use existing header data if available
   {
@@ -825,6 +826,7 @@ void GCMemcardDirectory::FlushToFile()
             Core::DisplayMessage("Wrote save contents to GCI Folder", 4000);
 
             // Push updated .gci to cloud in the background.
+            if (Config::Get(Config::MAIN_CLOUDSYNC_ENABLED))
             {
               const std::string remote_dir = BuildRcloneRemoteDir(m_game_id);
               const std::string gci_path = save.m_filename;

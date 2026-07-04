@@ -5,6 +5,7 @@
 
 #include <QWidget>
 
+class QCheckBox;
 class QLabel;
 class QLineEdit;
 
@@ -18,6 +19,7 @@ public:
 private:
   void RunCheck();
 
+  QCheckBox* m_enable_checkbox;
   QLabel* m_status_label;
   QLineEdit* m_remote_edit;
 };

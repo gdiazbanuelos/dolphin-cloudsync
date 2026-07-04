@@ -327,6 +327,7 @@ extern const Info<std::string> MAIN_AUTOUPDATE_HASH_OVERRIDE;
 
 // Main.CloudSync
 
+extern const Info<bool> MAIN_CLOUDSYNC_ENABLED;
 extern const Info<std::string> MAIN_CLOUDSYNC_REMOTE;
 
 // Main.Movie

@@ -322,9 +322,83 @@ static std::string BuildRcloneRemoteDir(u32 game_id)
   return fmt::format("{}/{} {}", cloud_root, game_id_str, suffix);
 }
 
+// Returns true if the remote directory for this game has no files (new or empty remote).
+static bool CloudRemoteIsEmpty(const std::string& remote_dir)
+{
+  std::string listing;
+#ifdef _WIN32
+  {
+    const std::wstring wcmd = UTF8ToWString(fmt::format("rclone lsf \"{}\"", remote_dir));
+    HANDLE read_pipe, write_pipe;
+    SECURITY_ATTRIBUTES sa{sizeof(sa), nullptr, TRUE};
+    if (CreatePipe(&read_pipe, &write_pipe, &sa, 0))
+    {
+      STARTUPINFOW si{};
+      si.cb = sizeof(si);
+      si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+      si.hStdOutput = write_pipe;
+      si.hStdError = write_pipe;
+      si.wShowWindow = SW_HIDE;
+      PROCESS_INFORMATION pi{};
+      if (CreateProcessW(nullptr, const_cast<wchar_t*>(wcmd.c_str()), nullptr, nullptr, TRUE,
+                         CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi))
+      {
+        CloseHandle(write_pipe);
+        char buf[512];
+        DWORD bytes_read;
+        while (ReadFile(read_pipe, buf, sizeof(buf) - 1, &bytes_read, nullptr) && bytes_read > 0)
+        {
+          buf[bytes_read] = '\0';
+          listing += buf;
+        }
+        WaitForSingleObject(pi.hProcess, INFINITE);
+        CloseHandle(pi.hProcess);
+        CloseHandle(pi.hThread);
+      }
+      else
+      {
+        CloseHandle(write_pipe);
+      }
+      CloseHandle(read_pipe);
+    }
+  }
+#else
+  {
+    const std::string rclone_path = FindRclonePath();
+    if (rclone_path.empty())
+      return false;
+    const std::string cmd =
+        fmt::format("\"{}\" lsf \"{}\" 2>/dev/null", rclone_path, remote_dir);
+    FILE* pipe = popen(cmd.c_str(), "r");
+    if (pipe)
+    {
+      char buf[512];
+      while (fgets(buf, sizeof(buf), pipe))
+        listing += buf;
+      pclose(pipe);
+    }
+  }
+#endif
+  // Trim whitespace — empty listing means no files on remote
+  const bool empty = listing.find_first_not_of(" \t\r\n") == std::string::npos;
+  return empty;
+}
+
 static void PullSavesFromCloud(u32 game_id, const std::string& local_dir)
 {
   const std::string remote_dir = BuildRcloneRemoteDir(game_id);
+
+  // If the remote is empty/new, push all local saves up first so nothing is lost.
+  if (CloudRemoteIsEmpty(remote_dir))
+  {
+    const std::string remote_name = Config::Get(Config::MAIN_CLOUDSYNC_REMOTE);
+    std::thread([local_dir, remote_dir, remote_name] {
+      if (RunRcloneSync({"copy", local_dir, remote_dir, "--no-traverse"}))
+        Core::DisplayMessage(fmt::format("Initial upload to {}", remote_name), 4000);
+    }).detach();
+    return;
+  }
+
   if (RunRcloneSync({"copy", remote_dir, local_dir, "--update", "--no-traverse"}))
     Core::DisplayMessage(
         fmt::format("Pulled latest save from {}", Config::Get(Config::MAIN_CLOUDSYNC_REMOTE)),

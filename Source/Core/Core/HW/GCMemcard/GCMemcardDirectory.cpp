@@ -388,12 +388,16 @@ static void PullSavesFromCloud(u32 game_id, const std::string& local_dir)
 {
   const std::string remote_dir = BuildRcloneRemoteDir(game_id);
 
-  // If the remote is empty/new, push all local saves up first so nothing is lost.
+  // If the remote is empty/new, push this game's local saves first so nothing is lost.
+  // local_dir contains all games' .gci files, so filter by the 4-char game code prefix.
   if (CloudRemoteIsEmpty(remote_dir))
   {
+    const u32 swapped = Common::swap32(game_id);
+    const std::string game_code(reinterpret_cast<const char*>(&swapped), 4);
+    const std::string include_pattern = game_code + "*.gci";
     const std::string remote_name = Config::Get(Config::MAIN_CLOUDSYNC_REMOTE);
-    std::thread([local_dir, remote_dir, remote_name] {
-      if (RunRcloneSync({"copy", local_dir, remote_dir, "--no-traverse"}))
+    std::thread([local_dir, remote_dir, remote_name, include_pattern] {
+      if (RunRcloneSync({"copy", local_dir, remote_dir, "--include", include_pattern, "--no-traverse"}))
         Core::DisplayMessage(fmt::format("Initial upload to {}", remote_name), 4000);
     }).detach();
     return;

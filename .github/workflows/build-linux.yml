@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake build-essential pkg-config libgl1-mesa-dev zsync \
+          sudo apt-get install -y cmake build-essential pkg-config libgl1-mesa-dev \
             libevdev-dev libusb-1.0-0-dev libudev-dev libpulse-dev libasound2-dev \
             libxi-dev libxrandr-dev libssl-dev qt6-base-dev qt6-base-private-dev \
             libqt6svg6-dev libxkbcommon-dev libvulkan-dev libminiupnpc-dev \
@@ -46,14 +46,7 @@ jobs:
         env:
           QMAKE: /usr/bin/qmake6
           OUTPUT: Dolphin-CloudSync-x86_64.AppImage
-          UPDATE_INFORMATION: gh-releases-zsync|gdiazbanuelos|dolphin-cloudsync|latest|Dolphin-CloudSync-x86_64.AppImage.zsync
         run: |
-          VERSION=$(date -u +'%Y.%m.%d')
-          DATE=$(date -u +'%Y-%m-%d')
-          sed -i "s/version=\"PLACEHOLDER\"/version=\"$VERSION\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
-          sed -i "s/date=\"PLACEHOLDER\"/date=\"$DATE\"/" Data/org.DolphinEmu.dolphin-emu.appdata.xml
-          mkdir -p appdir/usr/share/metainfo
-          cp Data/org.DolphinEmu.dolphin-emu.appdata.xml appdir/usr/share/metainfo/
           ./linuxdeploy-x86_64.AppImage \
             --appdir appdir \
             --executable ${{ github.workspace }}/install/bin/dolphin-emu \
@@ -61,22 +54,28 @@ jobs:
             --icon-file Data/dolphin-emu.png \
             --plugin qt \
             --output appimage
-          zsyncmake Dolphin-CloudSync-x86_64.AppImage
 
       - name: Get version
         id: version
-        run: |
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+        run: echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
 
-      - name: Create Release
+      - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: Dolphin CloudSync ${{ steps.version.outputs.version }}
-          generate_release_notes: true
-          files: |
-            Dolphin-CloudSync-x86_64.AppImage
-            Dolphin-CloudSync-x86_64.AppImage.zsync
+          body: |
+            ## What's included
+            - Automatic Dropbox cloud save sync via rclone
+            - Saves pushed to Dropbox on every in-game save
+            - Saves pulled from Dropbox on every game launch
+            - Works on Windows and Linux (including Steam Deck)
+
+            ## Setup
+            See the [README](https://github.com/gdiazbanuelos/dolphin-cloudsync#cloud-save-feature) for rclone setup instructions.
+
+            ## Changes since last release
+            ${{ github.event.compare }}
+          files: Dolphin-CloudSync-x86_64.AppImage
           make_latest: true
           prerelease: false

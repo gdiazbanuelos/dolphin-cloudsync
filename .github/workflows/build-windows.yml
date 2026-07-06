@@ -29,20 +29,26 @@ jobs:
       - name: Get version
         id: version
         shell: bash
-        run: |
-          echo "sha=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
-          echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+        run: echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
 
       - name: Zip release folder
         shell: pwsh
         run: |
           Compress-Archive -Path Binary\x64\* -DestinationPath Dolphin-CloudSync-Windows.zip
 
-      - name: Create Release
+      - name: Upload to release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.version }}
           name: Dolphin CloudSync ${{ steps.version.outputs.version }}
-          generate_release_notes: true
+          body: |
+            ## What's included
+            - Automatic Dropbox cloud save sync via rclone
+            - Saves pushed to Dropbox on every in-game save
+            - Saves pulled from Dropbox on every game launch
+            - Works on Windows and Linux (including Steam Deck)
+
+            ## Setup
+            See the [README](https://github.com/gdiazbanuelos/dolphin-cloudsync#cloud-save-feature) for rclone setup instructions.
           files: Dolphin-CloudSync-Windows.zip
           prerelease: false

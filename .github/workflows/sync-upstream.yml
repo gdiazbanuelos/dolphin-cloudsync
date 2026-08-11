@@ -31,13 +31,35 @@ jobs:
           git merge upstream/master --no-edit
         continue-on-error: true
 
-      - name: Check for conflicts
+      - name: Auto-resolve known conflicts
         if: steps.merge.outcome == 'failure'
         run: |
-          echo "Merge conflict detected — manual resolution required."
-          echo "Conflicted files:"
-          git diff --name-only --diff-filter=U
-          exit 1
+          # .vcxproj files are auto-generated — always prefer upstream's version.
+          for f in $(git diff --name-only --diff-filter=U | grep '\.vcxproj$'); do
+            echo "Auto-resolving $f with upstream version"
+            git checkout --theirs "$f"
+            git add "$f"
+          done
+
+          # Our custom file — always keep ours.
+          if git diff --name-only --diff-filter=U | grep -q 'GCMemcardDirectory.cpp'; then
+            echo "Auto-resolving GCMemcardDirectory.cpp with our version"
+            git checkout --ours "Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp"
+            git add "Source/Core/Core/HW/GCMemcard/GCMemcardDirectory.cpp"
+          fi
+
+          # Check if all conflicts are resolved
+          if git diff --name-only --diff-filter=U | grep -q .; then
+            echo "Unresolved conflicts remain:"
+            git diff --name-only --diff-filter=U
+            exit 1
+          fi
+
+          git commit --no-edit
+
+      - name: Check for unresolved conflicts
+        if: steps.merge.outcome == 'failure'
+        run: echo "All conflicts resolved automatically"
 
       - name: Push merged changes
         if: steps.merge.outcome == 'success'

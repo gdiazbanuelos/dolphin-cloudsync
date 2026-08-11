@@ -4,6 +4,8 @@ package org.dolphinemu.dolphinemu.features.netplay.ui
 
 import android.content.Intent
 import android.content.res.Configuration
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -44,6 +46,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -53,11 +56,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MediumTopAppBar
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SheetValue
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -87,6 +87,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.sp
 import androidx.window.core.layout.WindowSizeClass
 import coil.compose.AsyncImage
@@ -103,6 +104,7 @@ import org.dolphinemu.dolphinemu.features.netplay.model.Player
 import org.dolphinemu.dolphinemu.features.netplay.model.SaveTransferProgress
 import org.dolphinemu.dolphinemu.features.netplay.model.TraversalState
 import org.dolphinemu.dolphinemu.model.GameFile
+import org.dolphinemu.dolphinemu.ui.theme.DolphinScaffold
 import org.dolphinemu.dolphinemu.ui.theme.DolphinTheme
 import org.dolphinemu.dolphinemu.ui.theme.MenuSpacer
 import org.dolphinemu.dolphinemu.ui.theme.OutlinedBox
@@ -140,19 +142,19 @@ fun NetplayScreen(
     gameDigestProgress: GameDigestProgress?,
     joinAddresses: Map<JoinInfoType, JoinAddress>,
 ) {
-    Scaffold(
-        topBar = {
-            MediumTopAppBar(
-                title = { Text(stringResource(R.string.netplay_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBackClicked) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                        )
-                    }
-                },
-            )
+    val scrollState = rememberScrollState()
+
+    DolphinScaffold(
+        title = {
+            Text(stringResource(R.string.netplay_title))
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClicked) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back",
+                )
+            }
         },
         floatingActionButton = {
             if (isHosting) {
@@ -202,6 +204,7 @@ fun NetplayScreen(
                 joinAddresses = joinAddresses,
                 selectedJoinInfoType = selectedJoinInfoType,
                 onSelectedJoinInfoTypeChanged = { selectedJoinInfoType = it },
+                scrollState = scrollState,
                 contentPadding = innerPadding,
                 modifier = modifier
             )
@@ -228,6 +231,7 @@ fun NetplayScreen(
                 joinAddresses = joinAddresses,
                 selectedJoinInfoType = selectedJoinInfoType,
                 onSelectedJoinInfoTypeChanged = { selectedJoinInfoType = it },
+                scrollState = scrollState,
                 contentPadding = innerPadding,
                 modifier = modifier
             )
@@ -346,12 +350,13 @@ private fun PortraitContent(
     joinAddresses: Map<JoinInfoType, JoinAddress>,
     selectedJoinInfoType: JoinInfoType,
     onSelectedJoinInfoTypeChanged: (JoinInfoType) -> Unit,
+    scrollState: ScrollState,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(scrollState)
             .padding(contentPadding)
     ) {
         Chat(
@@ -418,6 +423,7 @@ private fun LandscapeContent(
     joinAddresses: Map<JoinInfoType, JoinAddress>,
     selectedJoinInfoType: JoinInfoType,
     onSelectedJoinInfoTypeChanged: (JoinInfoType) -> Unit,
+    scrollState: ScrollState,
     contentPadding: PaddingValues,
     modifier: Modifier = Modifier,
 ) {
@@ -588,8 +594,10 @@ private fun Chat(
 
     fun LazyListScope.messages() {
         items(messages.size) { index ->
+            val message = messages[index]
             Text(
-                text = messages[index].message(context),
+                text = message.message(context),
+                color = message.color(),
                 style = MaterialTheme.typography.bodyMedium.copy(lineHeight = 18.sp),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -843,7 +851,7 @@ private fun JoinInfoDropdown(
             label = { Text(stringResource(R.string.netplay_host_address_label)) },
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .fillMaxWidth()
         )
 
@@ -1001,7 +1009,7 @@ private fun NetworkModeDropdown(
             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
             colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
             modifier = Modifier
-                .menuAnchor(MenuAnchorType.PrimaryNotEditable)
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                 .fillMaxWidth(),
         )
         ExposedDropdownMenu(
@@ -1262,6 +1270,21 @@ private fun GameDigestPlayerRow(
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun NetplayMessage.color(): Color {
+    val isDark = isSystemInDarkTheme()
+    return when (this) {
+        is NetplayMessage.Chat -> Color.Unspecified
+        is NetplayMessage.GameChanged -> if (isDark) Color(0xFFCE93D8) else Color(0xFF8E24AA)
+        is NetplayMessage.HostInputAuthorityChanged -> if (isDark) Color(0xFF90CAF9) else Color(
+            0xFF1565C0
+        )
+
+        is NetplayMessage.BufferChanged -> if (isDark) Color(0xFF80CBC4) else Color(0xFF00897B)
+        is NetplayMessage.Desync -> if (isDark) Color(0xFFEF9A9A) else Color(0xFFC62828)
     }
 }
 

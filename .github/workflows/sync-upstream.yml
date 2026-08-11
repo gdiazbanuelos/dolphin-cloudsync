@@ -35,10 +35,16 @@ jobs:
         if: steps.merge.outcome == 'failure'
         run: |
           # .vcxproj files are auto-generated — always prefer upstream's version.
+          # If upstream deleted the file, remove it. Otherwise take their version.
           for f in $(git diff --name-only --diff-filter=U | grep '\.vcxproj$'); do
-            echo "Auto-resolving $f with upstream version"
-            git checkout --theirs "$f"
-            git add "$f"
+            if git show upstream/master:"$f" > /dev/null 2>&1; then
+              echo "Auto-resolving $f with upstream version"
+              git checkout --theirs "$f"
+              git add "$f"
+            else
+              echo "Auto-resolving $f — deleted in upstream, removing"
+              git rm "$f"
+            fi
           done
 
           # Our custom file — always keep ours.

@@ -1,5 +1,9 @@
 # Dolphin CloudSync - A GameCube and Wii Emulator with Dropbox Cloud Saves
 
+## Contact Me
+
+Questions or feedback? Reach out at github@gusdiaz.com. Feel free to open a pull request!
+
 ![Build Windows](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-windows.yml/badge.svg)
 ![Build Linux](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-linux.yml/badge.svg)
 ![Sync Upstream](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/sync-upstream.yml/badge.svg)

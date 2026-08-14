@@ -34,16 +34,20 @@ jobs:
       - name: Auto-resolve known conflicts
         if: steps.merge.outcome == 'failure'
         run: |
-          # .vcxproj files are auto-generated — always prefer upstream's version.
-          # If upstream deleted the file, remove it. Otherwise take their version.
+          # .vcxproj files: if upstream still has the file, take their version.
+          # Upstream removed all Visual Studio project files (July 2026, moved to
+          # CMake-only), so this will always hit the "else" branch now — but our
+          # Windows build (build-windows.yml) still uses MSBuild against these
+          # files, so we keep ours instead of deleting them.
           for f in $(git diff --name-only --diff-filter=U | grep '\.vcxproj$'); do
             if git show upstream/master:"$f" > /dev/null 2>&1; then
               echo "Auto-resolving $f with upstream version"
               git checkout --theirs "$f"
               git add "$f"
             else
-              echo "Auto-resolving $f — deleted in upstream, removing"
-              git rm "$f"
+              echo "Auto-resolving $f — deleted in upstream, keeping ours (still needed for MSBuild)"
+              git checkout --ours "$f"
+              git add "$f"
             fi
           done
 

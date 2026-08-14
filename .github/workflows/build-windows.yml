@@ -78,12 +78,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.version }}
           name: Dolphin CloudSync ${{ steps.version.outputs.version }}
           body: |
-            ## What's included
-            - Automatic Dropbox cloud save sync via rclone
-            - Saves pushed to Dropbox on every in-game save
-            - Saves pulled from Dropbox on every game launch
-            - Works on Windows and Linux (including Steam Deck)
-
             ## Setup
             See the [README](https://github.com/gdiazbanuelos/dolphin-cloudsync#cloud-save-feature) for rclone setup instructions.
 

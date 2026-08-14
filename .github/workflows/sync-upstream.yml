@@ -71,6 +71,32 @@ jobs:
         if: steps.merge.outcome == 'failure'
         run: echo "All conflicts resolved automatically"
 
+      - name: Restore MSBuild project files silently removed by upstream
+        if: success()
+        run: |
+          # Not every upstream deletion trips a merge conflict — if we never
+          # touched a file ourselves, git applies the deletion cleanly with no
+          # warning. That's what happened to Source/dolphin-emu.sln (and
+          # potentially sibling .vcxproj/.vcxproj.filters files): upstream's
+          # "Remove Visual Studio Projects and Solutions" commit deleted them,
+          # nothing conflicted, and build-windows.yml broke silently days later.
+          # KNOWN_GOOD is the last commit before that removal was merged in —
+          # restore any of those paths that are currently missing from disk.
+          KNOWN_GOOD=d6e803e63d7a809fcafb4e39c79bdf4aabb49c79
+          git ls-tree -r --name-only "$KNOWN_GOOD" -- Source Languages \
+            | grep -E '\.(sln|vcxproj|vcxproj\.filters)$' \
+            | while read -r f; do
+                if [ ! -f "$f" ]; then
+                  echo "Restoring missing build file: $f"
+                  git checkout "$KNOWN_GOOD" -- "$f"
+                  git add "$f"
+                fi
+              done
+
+          if ! git diff --cached --quiet; then
+            git commit -m "Restore MSBuild project files silently removed by upstream merge"
+          fi
+
       - name: Push merged changes
         if: success()
         run: git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/gdiazbanuelos/dolphin-cloudsync.git master

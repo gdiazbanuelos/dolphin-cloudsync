@@ -18,6 +18,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+          fetch-depth: 0
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -30,6 +31,36 @@ jobs:
         id: version
         shell: bash
         run: echo "version=v$(date -u +'%Y.%m.%d')" >> $GITHUB_OUTPUT
+
+      - name: Generate changelog
+        id: changelog
+        shell: bash
+        run: |
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          RANGE="HEAD"
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="$PREV_TAG..HEAD"
+          fi
+
+          # Each sync-upstream run creates a merge commit whose second parent is
+          # upstream's tip at that time. Walking p1..p2 for every such merge in
+          # range gives exactly the commits that came in from upstream, regardless
+          # of which of our own commits (README edits, workflow fixes) sit in between.
+          CHANGELOG=$(git log $RANGE --merges --pretty=format:'%H %P' | while read -r merge p1 p2; do
+            if [ -n "$p2" ]; then
+              git log "$p1..$p2" --no-merges --pretty=format:'- %s'
+            fi
+          done | sort -u)
+
+          if [ -z "$CHANGELOG" ]; then
+            CHANGELOG="- No upstream changes since last release"
+          fi
+
+          {
+            echo "changelog<<EOF"
+            echo "$CHANGELOG"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Zip release folder
         shell: pwsh

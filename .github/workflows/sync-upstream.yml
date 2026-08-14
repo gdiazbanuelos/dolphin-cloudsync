@@ -72,5 +72,5 @@ jobs:
         run: echo "All conflicts resolved automatically"
 
       - name: Push merged changes
-        if: steps.merge.outcome == 'success'
+        if: success()
         run: git push https://x-access-token:${{ secrets.PAT_TOKEN }}@github.com/gdiazbanuelos/dolphin-cloudsync.git master

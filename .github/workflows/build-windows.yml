@@ -20,12 +20,17 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+      - name: Setup MSVC dev environment
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Setup Ninja
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      - name: Configure
+        run: cmake --preset ninja-release-x64
 
       - name: Build
-        run: |
-          msbuild Source/dolphin-emu.sln /p:Configuration=Release /p:Platform=x64 /m
+        run: cmake --build --preset ninja-build-release-x64 --target dolphin-emu
 
       - name: Get version
         id: version
@@ -65,7 +70,7 @@ jobs:
       - name: Zip release folder
         shell: pwsh
         run: |
-          Compress-Archive -Path Binary\x64\* -DestinationPath Dolphin-CloudSync-Windows.zip
+          Compress-Archive -Path build\release\x64\Binaries\* -DestinationPath Dolphin-CloudSync-Windows.zip
 
       - name: Upload to release
         uses: softprops/action-gh-release@v2
@@ -81,5 +86,8 @@ jobs:
 
             ## Setup
             See the [README](https://github.com/gdiazbanuelos/dolphin-cloudsync#cloud-save-feature) for rclone setup instructions.
+
+            ## Changes since last release
+            ${{ steps.changelog.outputs.changelog }}
           files: Dolphin-CloudSync-Windows.zip
           prerelease: false

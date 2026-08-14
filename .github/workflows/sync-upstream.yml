@@ -34,23 +34,6 @@ jobs:
       - name: Auto-resolve known conflicts
         if: steps.merge.outcome == 'failure'
         run: |
-          # .vcxproj files: if upstream still has the file, take their version.
-          # Upstream removed all Visual Studio project files (July 2026, moved to
-          # CMake-only), so this will always hit the "else" branch now — but our
-          # Windows build (build-windows.yml) still uses MSBuild against these
-          # files, so we keep ours instead of deleting them.
-          for f in $(git diff --name-only --diff-filter=U | grep '\.vcxproj$'); do
-            if git show upstream/master:"$f" > /dev/null 2>&1; then
-              echo "Auto-resolving $f with upstream version"
-              git checkout --theirs "$f"
-              git add "$f"
-            else
-              echo "Auto-resolving $f — deleted in upstream, keeping ours (still needed for MSBuild)"
-              git checkout --ours "$f"
-              git add "$f"
-            fi
-          done
-
           # Our custom file — always keep ours.
           if git diff --name-only --diff-filter=U | grep -q 'GCMemcardDirectory.cpp'; then
             echo "Auto-resolving GCMemcardDirectory.cpp with our version"
@@ -70,34 +53,6 @@ jobs:
       - name: Check for unresolved conflicts
         if: steps.merge.outcome == 'failure'
         run: echo "All conflicts resolved automatically"
-
-      - name: Restore MSBuild project files silently removed by upstream
-        if: success()
-        run: |
-          # Not every upstream deletion trips a merge conflict — if we never
-          # touched a file ourselves, git applies the deletion cleanly with no
-          # warning. Upstream's "Remove Visual Studio Projects and Solutions"
-          # commit didn't just delete our .sln/.vcxproj files — it deleted the
-          # *entire* parallel MSBuild scaffolding repo-wide: every Externals/*
-          # library's .vcxproj, and the Source/VSProps/*.props files every
-          # project imports first. None of that conflicted, so it broke
-          # build-windows.yml silently days later. KNOWN_GOOD is the last
-          # commit before that removal was merged in — restore any matching
-          # path, anywhere in the repo, that's currently missing from disk.
-          KNOWN_GOOD=d6e803e63d7a809fcafb4e39c79bdf4aabb49c79
-          git ls-tree -r --name-only "$KNOWN_GOOD" \
-            | grep -E '\.(sln|vcxproj|vcxproj\.filters|props|targets)$' \
-            | while read -r f; do
-                if [ ! -f "$f" ]; then
-                  echo "Restoring missing build file: $f"
-                  git checkout "$KNOWN_GOOD" -- "$f"
-                  git add "$f"
-                fi
-              done
-
-          if ! git diff --cached --quiet; then
-            git commit -m "Restore MSBuild project files silently removed by upstream merge"
-          fi
 
       - name: Push merged changes
         if: success()

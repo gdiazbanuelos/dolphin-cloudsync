@@ -76,15 +76,17 @@ jobs:
         run: |
           # Not every upstream deletion trips a merge conflict — if we never
           # touched a file ourselves, git applies the deletion cleanly with no
-          # warning. That's what happened to Source/dolphin-emu.sln (and
-          # potentially sibling .vcxproj/.vcxproj.filters files): upstream's
-          # "Remove Visual Studio Projects and Solutions" commit deleted them,
-          # nothing conflicted, and build-windows.yml broke silently days later.
-          # KNOWN_GOOD is the last commit before that removal was merged in —
-          # restore any of those paths that are currently missing from disk.
+          # warning. Upstream's "Remove Visual Studio Projects and Solutions"
+          # commit didn't just delete our .sln/.vcxproj files — it deleted the
+          # *entire* parallel MSBuild scaffolding repo-wide: every Externals/*
+          # library's .vcxproj, and the Source/VSProps/*.props files every
+          # project imports first. None of that conflicted, so it broke
+          # build-windows.yml silently days later. KNOWN_GOOD is the last
+          # commit before that removal was merged in — restore any matching
+          # path, anywhere in the repo, that's currently missing from disk.
           KNOWN_GOOD=d6e803e63d7a809fcafb4e39c79bdf4aabb49c79
-          git ls-tree -r --name-only "$KNOWN_GOOD" -- Source Languages \
-            | grep -E '\.(sln|vcxproj|vcxproj\.filters)$' \
+          git ls-tree -r --name-only "$KNOWN_GOOD" \
+            | grep -E '\.(sln|vcxproj|vcxproj\.filters|props|targets)$' \
             | while read -r f; do
                 if [ ! -f "$f" ]; then
                   echo "Restoring missing build file: $f"

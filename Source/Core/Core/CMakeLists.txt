@@ -226,6 +226,8 @@ add_library(core
   HW/GCKeyboard.h
   HW/GCKeyboardEmu.cpp
   HW/GCKeyboardEmu.h
+  HW/GCMemcard/CloudSync.cpp
+  HW/GCMemcard/CloudSync.h
   HW/GCMemcard/GCIFile.cpp
   HW/GCMemcard/GCIFile.h
   HW/GCMemcard/GCMemcard.cpp
@@ -237,6 +239,7 @@ add_library(core
   HW/GCMemcard/GCMemcardRaw.h
   HW/GCMemcard/GCMemcardUtils.cpp
   HW/GCMemcard/GCMemcardUtils.h
+  HW/GCMemcard/RcloneUtils.h
   HW/GCPad.cpp
   HW/GCPad.h
   HW/GCPadEmu.cpp

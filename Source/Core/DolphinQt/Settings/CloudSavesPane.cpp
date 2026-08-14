@@ -54,8 +54,7 @@ CloudSavesPane::CloudSavesPane()
   remote_layout->addWidget(m_remote_edit);
 
   connect(m_remote_edit, &QLineEdit::editingFinished, this, [this] {
-    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_REMOTE,
-                             m_remote_edit->text().toStdString());
+    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_REMOTE, m_remote_edit->text().toStdString());
   });
 
   // Status group
@@ -77,30 +76,29 @@ CloudSavesPane::CloudSavesPane()
 
 void CloudSavesPane::RunCheck()
 {
-  const QString remote = m_remote_edit->text().isEmpty() ?
-                             QStringLiteral("Dropbox") :
-                             m_remote_edit->text();
+  const QString remote =
+      m_remote_edit->text().isEmpty() ? QStringLiteral("Dropbox") : m_remote_edit->text();
   const QString remote_target = remote + QStringLiteral(":");
 
 #ifdef _WIN32
   const QString rclone_exe = QStringLiteral("rclone");
 #else
   const std::string rclone_path = FindRclonePath();
-  const QString rclone_exe = rclone_path.empty() ? QStringLiteral("rclone") :
-                                                    QString::fromStdString(rclone_path);
+  const QString rclone_exe =
+      rclone_path.empty() ? QStringLiteral("rclone") : QString::fromStdString(rclone_path);
 #endif
 
   const auto show_not_found = [this]() {
     m_status_label->setOpenExternalLinks(true);
-    m_status_label->setText(
-        tr("rclone was not found on this machine.<br><br>"
-           "<b>Setup Instructions:</b><br><br>"
-           "1. <a href=\"https://rclone.org/downloads/\">Download rclone</a> and add it to your PATH.<br><br>"
-           "2. Run <b>rclone config</b> in a terminal:<br>"
-           "&nbsp;&nbsp;&bull; Choose <b>n</b> for new remote<br>"
-           "&nbsp;&nbsp;&bull; Name it to match the remote name above<br>"
-           "&nbsp;&nbsp;&bull; Select your storage type and authorize<br><br>"
-           "Restart Dolphin after setup is complete."));
+    m_status_label->setText(tr("rclone was not found on this machine.<br><br>"
+                               "<b>Setup Instructions:</b><br><br>"
+                               "1. <a href=\"https://rclone.org/downloads/\">Download rclone</a> "
+                               "and add it to your PATH.<br><br>"
+                               "2. Run <b>rclone config</b> in a terminal:<br>"
+                               "&nbsp;&nbsp;&bull; Choose <b>n</b> for new remote<br>"
+                               "&nbsp;&nbsp;&bull; Name it to match the remote name above<br>"
+                               "&nbsp;&nbsp;&bull; Select your storage type and authorize<br><br>"
+                               "Restart Dolphin after setup is complete."));
   };
 
 #ifndef _WIN32
@@ -120,8 +118,8 @@ void CloudSavesPane::RunCheck()
           });
 
   connect(version_process, &QProcess::finished, this,
-          [this, version_process, show_not_found, rclone_exe,
-           remote_target](int exit_code, QProcess::ExitStatus) {
+          [this, version_process, show_not_found, rclone_exe, remote_target](int exit_code,
+                                                                             QProcess::ExitStatus) {
             version_process->deleteLater();
 
             if (exit_code != 0)
@@ -132,40 +130,41 @@ void CloudSavesPane::RunCheck()
 
 #ifdef _WIN32
             auto* const where_process = new QProcess(this);
-            connect(where_process, &QProcess::finished, this,
-                    [this, where_process, rclone_exe, remote_target](int, QProcess::ExitStatus) {
-                      const QString resolved_path =
-                          QString::fromUtf8(where_process->readAllStandardOutput()).trimmed();
-                      where_process->deleteLater();
-                      const QString display_path =
-                          resolved_path.isEmpty() ? rclone_exe : resolved_path;
+            connect(
+                where_process, &QProcess::finished, this,
+                [this, where_process, rclone_exe, remote_target](int, QProcess::ExitStatus) {
+                  const QString resolved_path =
+                      QString::fromUtf8(where_process->readAllStandardOutput()).trimmed();
+                  where_process->deleteLater();
+                  const QString display_path = resolved_path.isEmpty() ? rclone_exe : resolved_path;
 
-                      auto* const lsd_process = new QProcess(this);
-                      connect(lsd_process, &QProcess::finished, this,
-                              [this, lsd_process, display_path, remote_target](
-                                  int lsd_exit_code, QProcess::ExitStatus) {
-                                if (lsd_exit_code == 0)
-                                {
-                                  m_status_label->setText(
-                                      tr("rclone setup successfully.<br><br>Path: %1")
-                                          .arg(display_path));
-                                }
-                                else
-                                {
-                                  m_status_label->setText(
-                                      tr("rclone is installed (%1), but the remote <b>%2</b> is not configured.<br><br>"
-                                         "Run <b>rclone config</b> in a terminal:<br>"
-                                         "&nbsp;&nbsp;&bull; Choose <b>n</b> for new remote<br>"
-                                         "&nbsp;&nbsp;&bull; Name it <b>%3</b><br>"
-                                         "&nbsp;&nbsp;&bull; Select your storage type and authorize")
-                                          .arg(display_path)
-                                          .arg(remote_target)
-                                          .arg(m_remote_edit->text()));
-                                }
-                                lsd_process->deleteLater();
-                              });
-                      lsd_process->start(rclone_exe, {QStringLiteral("lsd"), remote_target});
-                    });
+                  auto* const lsd_process = new QProcess(this);
+                  connect(
+                      lsd_process, &QProcess::finished, this,
+                      [this, lsd_process, display_path, remote_target](int lsd_exit_code,
+                                                                       QProcess::ExitStatus) {
+                        if (lsd_exit_code == 0)
+                        {
+                          m_status_label->setText(
+                              tr("rclone setup successfully.<br><br>Path: %1").arg(display_path));
+                        }
+                        else
+                        {
+                          m_status_label->setText(
+                              tr("rclone is installed (%1), but the remote <b>%2</b> is not "
+                                 "configured.<br><br>"
+                                 "Run <b>rclone config</b> in a terminal:<br>"
+                                 "&nbsp;&nbsp;&bull; Choose <b>n</b> for new remote<br>"
+                                 "&nbsp;&nbsp;&bull; Name it <b>%3</b><br>"
+                                 "&nbsp;&nbsp;&bull; Select your storage type and authorize")
+                                  .arg(display_path)
+                                  .arg(remote_target)
+                                  .arg(m_remote_edit->text()));
+                        }
+                        lsd_process->deleteLater();
+                      });
+                  lsd_process->start(rclone_exe, {QStringLiteral("lsd"), remote_target});
+                });
             where_process->start(QStringLiteral("where"), {QStringLiteral("rclone")});
 #else
             auto* const lsd_process = new QProcess(this);

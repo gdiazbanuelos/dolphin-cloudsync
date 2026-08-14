@@ -172,6 +172,7 @@ private:
   void ShowAudioWindow();
   void ShowControllersWindow();
   void ShowGraphicsWindow();
+  void ShowCloudSavesWindow();
   void ShowFreeLookWindow();
   void ShowAboutDialog();
   void ShowHotkeyDialog();

@@ -129,14 +129,15 @@ void ToolBar::MakeActions()
   m_config_action = addAction(tr("Config"), this, &ToolBar::SettingsPressed);
   m_graphics_action = addAction(tr("Graphics"), this, &ToolBar::GraphicsPressed);
   m_controllers_action = addAction(tr("Controllers"), this, &ToolBar::ControllersPressed);
+  m_cloud_saves_action = addAction(tr("Cloud Saves"), this, &ToolBar::CloudSavesPressed);
 
   // Ensure every button has about the same width
   std::vector<QWidget*> items;
   for (const auto& action :
        {m_open_action, m_pause_play_action, m_stop_action, m_stop_action, m_fullscreen_action,
         m_screenshot_action, m_config_action, m_graphics_action, m_controllers_action,
-        m_step_action, m_step_over_action, m_step_out_action, m_skip_action, m_show_pc_action,
-        m_set_pc_action})
+        m_cloud_saves_action, m_step_action, m_step_over_action, m_step_out_action,
+        m_skip_action, m_show_pc_action, m_set_pc_action})
   {
     items.emplace_back(widgetForAction(action));
   }
@@ -193,4 +194,5 @@ void ToolBar::UpdateIcons()
   m_config_action->setIcon(Resources::GetThemeIcon("config"));
   m_controllers_action->setIcon(Resources::GetThemeIcon("classic"));
   m_graphics_action->setIcon(Resources::GetThemeIcon("graphics"));
+  m_cloud_saves_action->setIcon(Resources::GetThemeIcon("cloud"));
 }

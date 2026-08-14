@@ -43,6 +43,7 @@ enum class SettingsWindowPaneIndex : int
   General = 0,
   Graphics,
   Controllers,
+  CloudSaves,
   Interface,
   OnScreenDisplay,
   Audio,

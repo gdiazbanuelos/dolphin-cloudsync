@@ -1,6 +1,88 @@
-# Dolphin - A GameCube and Wii Emulator
+# Dolphin CloudSync - A GameCube and Wii Emulator with Dropbox Cloud Saves
 
-[Homepage](https://dolphin-emu.org/) | [Project Site](https://github.com/dolphin-emu/dolphin) | [Buildbot](https://dolphin.ci/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/) | [GitHub Wiki](https://github.com/dolphin-emu/dolphin/wiki) | [Issue Tracker](https://bugs.dolphin-emu.org/projects/emulator/issues) | [Coding Style](https://github.com/dolphin-emu/dolphin/blob/master/Contributing.md) | [Transifex Page](https://app.transifex.com/dolphinemu/dolphin-emu/dashboard/) | [Analytics](https://mon.dolphin-emu.org/)
+![Build Windows](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-windows.yml/badge.svg)
+![Build Linux](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/build-linux.yml/badge.svg)
+![Sync Upstream](https://github.com/gdiazbanuelos/dolphin-cloudsync/actions/workflows/sync-upstream.yml/badge.svg)
+
+This is a custom fork of [Dolphin Emulator](https://github.com/dolphin-emu/dolphin) that adds automatic cloud save syncing via [rclone](https://rclone.org/). Saves are automatically pushed to the cloud after each in-game save and pulled down before each game launch — similar to how Steam Cloud works.
+
+rclone supports over 70 storage providers including Dropbox, Google Drive, OneDrive, and more. The default remote is Dropbox, but any rclone-compatible provider can be used.
+
+**Upstream project:** [Project Site](https://github.com/dolphin-emu/dolphin) | [Homepage](https://dolphin-emu.org/) | [Forums](https://forums.dolphin-emu.org/) | [Wiki](https://wiki.dolphin-emu.org/)
+
+## Cloud Save Feature
+
+### How it works
+
+- **On game launch** — Dolphin checks your configured cloud remote for any save newer than your local copy and downloads it before the game loads
+- **On in-game save** — Dolphin silently pushes the updated save file to the cloud in the background
+- Saves are organized as: `{Remote}/Dolphin Cloud Saves/{Game Title} ({Game ID})/`
+- Works across Windows and Linux (including Steam Deck)
+- If rclone is not installed or the remote is unreachable, Dolphin runs normally without syncing
+
+### Setup
+
+**1. Install rclone**
+
+- Windows:
+  1. Download the zip from https://rclone.org/downloads/ and extract it to a folder (e.g. `C:\rclone`)
+  2. Add rclone to your PATH so Dolphin can find it:
+     - Open **Start** → search for **"Environment Variables"** → click **"Edit the system environment variables"**
+     - Click **Environment Variables** → under **System variables**, select **Path** → click **Edit**
+     - Click **New** and add the folder path where you extracted rclone (e.g. `C:\rclone`)
+     - Click **OK** on all dialogs
+  3. Open a new terminal and verify with:
+     ```sh
+     rclone version
+     ```
+- Linux/Steam Deck:
+  ```sh
+  mkdir -p ~/bin
+  curl https://downloads.rclone.org/rclone-current-linux-amd64.zip -o /tmp/rclone.zip
+  unzip /tmp/rclone.zip -d /tmp/rclone-tmp
+  cp /tmp/rclone-tmp/rclone-*/rclone ~/bin/rclone
+  chmod +x ~/bin/rclone
+  ```
+
+**2. Configure your cloud remote**
+```sh
+rclone config
+```
+Follow the prompts: choose `n` for new remote, give it a name, select your storage provider type, and authorize via browser.
+
+The default remote name Dolphin looks for is `Dropbox`, but you can name it anything and use any supported provider (Google Drive, OneDrive, S3, etc.). Just make sure the name you enter in Dolphin's Cloud Saves settings matches what you set here.
+
+**3. Enable GCI Folder mode in Dolphin**
+
+Config → GameCube → Memory Card → set to **GCI Folder**
+
+**4. Set your rclone remote name (optional)**
+
+By default, Dolphin will sync to a remote named `Dropbox`. If you named your remote something different (e.g. `GoogleDrive`, `MyNAS`), you can change it in Dolphin:
+
+Cloud Saves → rclone Remote → enter the name to match your remote
+
+To see all your configured remote names, run:
+```sh
+rclone listremotes
+```
+Enter the name without the colon. For example if `rclone listremotes` shows `GoogleDrive:`, enter `GoogleDrive`.
+
+That's it — saves will sync automatically from that point on.
+
+### Supported rclone locations (Linux)
+
+The following paths are checked in order:
+- `/usr/bin/rclone`
+- `/usr/local/bin/rclone`
+- `/home/deck/bin/rclone`
+- `$HOME/bin/rclone`
+
+### Downloads
+
+Pre-built binaries are available on the [Releases](https://github.com/gdiazbanuelos/dolphin-cloudsync/releases) page.
+
+---
 
 Dolphin is an emulator for running GameCube and Wii games on Windows,
 Linux, macOS, and recent Android devices. It's licensed under the terms

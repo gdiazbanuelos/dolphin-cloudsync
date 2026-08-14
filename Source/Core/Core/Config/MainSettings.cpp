@@ -516,6 +516,11 @@ const Info<std::string> MAIN_AUTOUPDATE_UPDATE_TRACK{{System::Main, "AutoUpdate"
 const Info<std::string> MAIN_AUTOUPDATE_HASH_OVERRIDE{{System::Main, "AutoUpdate", "HashOverride"},
                                                       ""};
 
+// Main.CloudSync
+
+const Info<bool> MAIN_CLOUDSYNC_ENABLED{{System::Main, "CloudSync", "Enabled"}, true};
+const Info<std::string> MAIN_CLOUDSYNC_REMOTE{{System::Main, "CloudSync", "Remote"}, "Dropbox"};
+
 // Main.Movie
 
 const Info<bool> MAIN_MOVIE_PAUSE_MOVIE{{System::Main, "Movie", "PauseMovie"}, false};

@@ -3,11 +3,12 @@
 
 #pragma once
 
+#include <QString>
 #include <QWidget>
 
-class QCheckBox;
+class ConfigBool;
+class ConfigText;
 class QLabel;
-class QLineEdit;
 
 class CloudSavesPane final : public QWidget
 {
@@ -18,8 +19,11 @@ public:
 
 private:
   void RunCheck();
+  void MigrateRemoteFolder(const QString& old_folder, const QString& new_folder);
 
-  QCheckBox* m_enable_checkbox;
+  ConfigBool* m_enable_checkbox;
   QLabel* m_status_label;
-  QLineEdit* m_remote_edit;
+  ConfigText* m_remote_folder_edit;
+  ConfigText* m_remote_edit;
+  QString m_previous_remote_folder;
 };

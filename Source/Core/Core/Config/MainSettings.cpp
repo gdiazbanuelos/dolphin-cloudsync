@@ -520,6 +520,8 @@ const Info<std::string> MAIN_AUTOUPDATE_HASH_OVERRIDE{{System::Main, "AutoUpdate
 
 const Info<bool> MAIN_CLOUDSYNC_ENABLED{{System::Main, "CloudSync", "Enabled"}, true};
 const Info<std::string> MAIN_CLOUDSYNC_REMOTE{{System::Main, "CloudSync", "Remote"}, "Dropbox"};
+const Info<std::string> MAIN_CLOUDSYNC_REMOTE_FOLDER{{System::Main, "CloudSync", "RemoteFolder"},
+                                                     "Dolphin Cloud Saves"};
 
 // Main.Movie
 

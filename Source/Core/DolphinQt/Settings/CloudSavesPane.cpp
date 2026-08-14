@@ -3,44 +3,76 @@
 
 #include "DolphinQt/Settings/CloudSavesPane.h"
 
-#include <QCheckBox>
 #include <QGroupBox>
 #include <QLabel>
 #include <QLineEdit>
+#include <QMessageBox>
 #include <QProcess>
 #include <QString>
+#include <QTimer>
 #include <QVBoxLayout>
 
 #include "Core/Config/MainSettings.h"
+#include "DolphinQt/Config/ConfigControls/ConfigBool.h"
+#include "DolphinQt/Config/ConfigControls/ConfigText.h"
 
 #ifndef _WIN32
 #include "Core/HW/GCMemcard/RcloneUtils.h"
 #endif
+
+// How long to wait for a network-touching rclone command (checking or moving a remote folder)
+// before giving up, so an offline or unreachable remote doesn't leave the UI stuck with no
+// feedback.
+constexpr int RCLONE_NETWORK_TIMEOUT_MS = 15000;
 
 CloudSavesPane::CloudSavesPane()
 {
   auto* const main_layout = new QVBoxLayout{this};
 
   // Enable/disable toggle
-  m_enable_checkbox = new QCheckBox{tr("Enable cloud save sync")};
-  m_enable_checkbox->setChecked(Config::Get(Config::MAIN_CLOUDSYNC_ENABLED));
+  m_enable_checkbox = new ConfigBool(tr("Enable cloud save sync"), Config::MAIN_CLOUDSYNC_ENABLED);
   main_layout->addWidget(m_enable_checkbox);
-
-#if QT_VERSION >= QT_VERSION_CHECK(6, 7, 0)
-  connect(m_enable_checkbox, &QCheckBox::checkStateChanged, this, [this](Qt::CheckState state) {
-    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
-  });
-#else
-  connect(m_enable_checkbox, &QCheckBox::stateChanged, this, [this](int state) {
-    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_ENABLED, state == Qt::Checked);
-  });
-#endif
 
   // Remote config group
   auto* const remote_group = new QGroupBox{tr("rclone Remote")};
   main_layout->addWidget(remote_group);
 
   auto* const remote_layout = new QVBoxLayout{remote_group};
+
+  auto* const folder_label = new QLabel{tr("<b>Remote Folder Name</b>")};
+  remote_layout->addWidget(folder_label);
+
+  auto* const folder_description =
+      new QLabel{tr("Name of the folder created in your cloud storage where saves are kept.")};
+  folder_description->setWordWrap(true);
+  remote_layout->addWidget(folder_description);
+
+  m_remote_folder_edit = new ConfigText(Config::MAIN_CLOUDSYNC_REMOTE_FOLDER);
+  remote_layout->addWidget(m_remote_folder_edit);
+
+  // ConfigText already saves the new value to Config on editingFinished (connected in its own
+  // constructor, before this connection), so the old value has to be tracked separately here
+  // rather than read back from Config.
+  m_previous_remote_folder = m_remote_folder_edit->text();
+  connect(m_remote_folder_edit, &QLineEdit::editingFinished, this, [this] {
+    const QString new_folder = m_remote_folder_edit->text();
+    if (new_folder != m_previous_remote_folder && !new_folder.isEmpty())
+    {
+      const auto choice = QMessageBox::question(
+          this, tr("Move Cloud Saves?"),
+          tr("Move existing saves from the cloud folder \"%1\" to \"%2\"?<br><br>"
+             "If you skip this, saves already synced under the old folder name won't be found "
+             "until you rename it back.")
+              .arg(m_previous_remote_folder, new_folder),
+          QMessageBox::Yes | QMessageBox::No);
+      if (choice == QMessageBox::Yes)
+        MigrateRemoteFolder(m_previous_remote_folder, new_folder);
+    }
+    m_previous_remote_folder = new_folder;
+  });
+
+  auto* const provider_label = new QLabel{tr("<b>Cloud Provider</b>")};
+  remote_layout->addWidget(provider_label);
 
   auto* const remote_label = new QLabel{
       tr("rclone remote name — must match the name you gave when running <b>rclone config</b>. "
@@ -50,12 +82,8 @@ CloudSavesPane::CloudSavesPane()
   remote_label->setWordWrap(true);
   remote_layout->addWidget(remote_label);
 
-  m_remote_edit = new QLineEdit{QString::fromStdString(Config::Get(Config::MAIN_CLOUDSYNC_REMOTE))};
+  m_remote_edit = new ConfigText(Config::MAIN_CLOUDSYNC_REMOTE);
   remote_layout->addWidget(m_remote_edit);
-
-  connect(m_remote_edit, &QLineEdit::editingFinished, this, [this] {
-    Config::SetBaseOrCurrent(Config::MAIN_CLOUDSYNC_REMOTE, m_remote_edit->text().toStdString());
-  });
 
   // Status group
   auto* const status_group = new QGroupBox{tr("Status")};
@@ -83,7 +111,7 @@ void CloudSavesPane::RunCheck()
 #ifdef _WIN32
   const QString rclone_exe = QStringLiteral("rclone");
 #else
-  const std::string rclone_path = FindRclonePath();
+  const std::string rclone_path = Memcard::FindRclonePath();
   const QString rclone_exe =
       rclone_path.empty() ? QStringLiteral("rclone") : QString::fromStdString(rclone_path);
 #endif
@@ -139,11 +167,27 @@ void CloudSavesPane::RunCheck()
                   const QString display_path = resolved_path.isEmpty() ? rclone_exe : resolved_path;
 
                   auto* const lsd_process = new QProcess(this);
+                  auto* const lsd_timeout = new QTimer(this);
+                  lsd_timeout->setSingleShot(true);
+                  connect(lsd_timeout, &QTimer::timeout, this, [lsd_process] {
+                    if (lsd_process->state() != QProcess::NotRunning)
+                      lsd_process->kill();
+                  });
                   connect(
                       lsd_process, &QProcess::finished, this,
-                      [this, lsd_process, display_path, remote_target](int lsd_exit_code,
-                                                                       QProcess::ExitStatus) {
-                        if (lsd_exit_code == 0)
+                      [this, lsd_process, lsd_timeout, display_path,
+                       remote_target](int lsd_exit_code, QProcess::ExitStatus lsd_exit_status) {
+                        lsd_timeout->stop();
+                        lsd_timeout->deleteLater();
+                        if (lsd_exit_status == QProcess::CrashExit)
+                        {
+                          m_status_label->setText(
+                              tr("rclone is installed (%1), but timed out trying to reach the "
+                                 "remote <b>%2</b>. Check that it's online and reachable.")
+                                  .arg(display_path)
+                                  .arg(remote_target));
+                        }
+                        else if (lsd_exit_code == 0)
                         {
                           m_status_label->setText(
                               tr("rclone setup successfully.<br><br>Path: %1").arg(display_path));
@@ -163,15 +207,32 @@ void CloudSavesPane::RunCheck()
                         }
                         lsd_process->deleteLater();
                       });
+                  lsd_timeout->start(RCLONE_NETWORK_TIMEOUT_MS);
                   lsd_process->start(rclone_exe, {QStringLiteral("lsd"), remote_target});
                 });
             where_process->start(QStringLiteral("where"), {QStringLiteral("rclone")});
 #else
             auto* const lsd_process = new QProcess(this);
+            auto* const lsd_timeout = new QTimer(this);
+            lsd_timeout->setSingleShot(true);
+            connect(lsd_timeout, &QTimer::timeout, this, [lsd_process] {
+              if (lsd_process->state() != QProcess::NotRunning)
+                lsd_process->kill();
+            });
             connect(lsd_process, &QProcess::finished, this,
-                    [this, lsd_process, rclone_exe, remote_target](int lsd_exit_code,
-                                                                   QProcess::ExitStatus) {
-                      if (lsd_exit_code == 0)
+                    [this, lsd_process, lsd_timeout, rclone_exe,
+                     remote_target](int lsd_exit_code, QProcess::ExitStatus lsd_exit_status) {
+                      lsd_timeout->stop();
+                      lsd_timeout->deleteLater();
+                      if (lsd_exit_status == QProcess::CrashExit)
+                      {
+                        m_status_label->setText(
+                            tr("rclone is installed (%1), but timed out trying to reach the "
+                               "remote <b>%2</b>. Check that it's online and reachable.")
+                                .arg(rclone_exe)
+                                .arg(remote_target));
+                      }
+                      else if (lsd_exit_code == 0)
                       {
                         m_status_label->setText(
                             tr("rclone setup successfully.<br><br>Path: %1").arg(rclone_exe));
@@ -190,9 +251,67 @@ void CloudSavesPane::RunCheck()
                       }
                       lsd_process->deleteLater();
                     });
+            lsd_timeout->start(RCLONE_NETWORK_TIMEOUT_MS);
             lsd_process->start(rclone_exe, {QStringLiteral("lsd"), remote_target});
 #endif
           });
 
   version_process->start(rclone_exe, {QStringLiteral("version")});
+}
+
+void CloudSavesPane::MigrateRemoteFolder(const QString& old_folder, const QString& new_folder)
+{
+  const QString remote =
+      m_remote_edit->text().isEmpty() ? QStringLiteral("Dropbox") : m_remote_edit->text();
+
+#ifdef _WIN32
+  const QString rclone_exe = QStringLiteral("rclone");
+#else
+  const std::string rclone_path = Memcard::FindRclonePath();
+  if (rclone_path.empty())
+    return;
+  const QString rclone_exe = QString::fromStdString(rclone_path);
+#endif
+
+  m_status_label->setText(tr("Moving saves from \"%1\" to \"%2\"...").arg(old_folder, new_folder));
+
+  auto* const move_process = new QProcess(this);
+  auto* const move_timeout = new QTimer(this);
+  move_timeout->setSingleShot(true);
+  connect(move_timeout, &QTimer::timeout, this, [move_process] {
+    if (move_process->state() != QProcess::NotRunning)
+      move_process->kill();
+  });
+
+  connect(move_process, &QProcess::finished, this,
+          [this, move_process, move_timeout, old_folder,
+           new_folder](int exit_code, QProcess::ExitStatus exit_status) {
+            move_timeout->stop();
+            move_timeout->deleteLater();
+
+            if (exit_status == QProcess::CrashExit)
+            {
+              m_status_label->setText(tr("Timed out moving saves from \"%1\" to \"%2\". You may "
+                                         "need to move them manually with rclone.")
+                                          .arg(old_folder, new_folder));
+            }
+            else if (exit_code == 0)
+            {
+              m_status_label->setText(
+                  tr("Moved saves from \"%1\" to \"%2\".").arg(old_folder, new_folder));
+            }
+            else
+            {
+              m_status_label->setText(
+                  tr("Could not move saves from \"%1\" to \"%2\" (the old folder may not have "
+                     "existed yet). New saves will be written to \"%2\".")
+                      .arg(old_folder, new_folder));
+            }
+            move_process->deleteLater();
+          });
+
+  move_timeout->start(RCLONE_NETWORK_TIMEOUT_MS);
+  move_process->start(rclone_exe,
+                      {QStringLiteral("moveto"), remote + QStringLiteral(":") + old_folder,
+                       remote + QStringLiteral(":") + new_folder});
 }

@@ -29,6 +29,7 @@
 #include "Common/StringUtil.h"
 #include "Common/Thread.h"
 
+#include "Core/Config/MainSettings.h"
 #include "Core/Config/SessionSettings.h"
 #include "Core/Core.h"
 #include "Core/HW/EXI/EXI_DeviceIPL.h"
